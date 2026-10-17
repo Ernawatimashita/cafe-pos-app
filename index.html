@@ -68,6 +68,11 @@
             padding: 15px;
             border-radius: 8px;
         }
+
+        .payment-option-btn {
+            border-radius: 8px;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -116,7 +121,7 @@
                     </div>
 
                     <!-- Cart Item List -->
-                    <div id="cart-list" style="max-height: 280px; overflow-y: auto;" class="mb-3">
+                    <div id="cart-list" style="max-height: 250px; overflow-y: auto;" class="mb-3">
                         <p class="text-center text-muted my-4">Belum ada pesanan dipilih</p>
                     </div>
 
@@ -135,28 +140,56 @@
                             <span id="total-val" class="text-primary">Rp 0</span>
                         </div>
 
-                        <!-- Opsi Pembayaran Tunai -->
+                        <!-- Opsi Metode Pembayaran (Tunai / QRIS) -->
                         <div class="mb-3">
-                            <label class="form-label fw-bold mb-1">Pembayaran Tunai (Rp)</label>
-                            <input type="number" id="cash-amount" class="form-control form-control-lg mb-2" placeholder="Masukkan jumlah uang..." oninput="calculateChange()">
-                            
-                            <!-- Quick Cash Buttons -->
-                            <div class="d-flex gap-1 flex-wrap mb-2">
-                                <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash('exact')">Uang Pas</button>
-                                <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash(20000)">20k</button>
-                                <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash(50000)">50k</button>
-                                <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash(100000)">100k</button>
+                            <label class="form-label fw-bold mb-2">Metode Pembayaran</label>
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check" name="paymentMethod" id="payMethodCash" value="CASH" checked onchange="switchPaymentMethod('CASH')">
+                                    <label class="btn btn-outline-primary w-100 payment-option-btn py-2" for="payMethodCash">
+                                        <i class="fa-solid fa-money-bill-wave me-1"></i> Tunai
+                                    </label>
+                                </div>
+                                <div class="col-6">
+                                    <input type="radio" class="btn-check" name="paymentMethod" id="payMethodQris" value="QRIS" onchange="switchPaymentMethod('QRIS')">
+                                    <label class="btn btn-outline-primary w-100 payment-option-btn py-2" for="payMethodQris">
+                                        <i class="fa-solid fa-qrcode me-1"></i> QRIS
+                                    </label>
+                                </div>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded border">
-                                <span class="fw-semibold">Kembalian:</span>
-                                <span id="change-val" class="fw-bold fs-6 text-secondary">Rp 0</span>
+                            <!-- Panel Tampilan Tunai -->
+                            <div id="cash-panel">
+                                <label class="form-label fw-bold mb-1 small text-muted">Nominal Uang Tunai (Rp)</label>
+                                <input type="number" id="cash-amount" class="form-control form-control-lg mb-2" placeholder="Masukkan jumlah uang..." oninput="calculateChange()">
+                                
+                                <!-- Quick Cash Buttons -->
+                                <div class="d-flex gap-1 flex-wrap mb-2">
+                                    <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash('exact')">Uang Pas</button>
+                                    <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash(20000)">20k</button>
+                                    <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash(50000)">50k</button>
+                                    <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash(100000)">100k</button>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded border mb-3">
+                                    <span class="fw-semibold">Kembalian:</span>
+                                    <span id="change-val" class="fw-bold fs-6 text-secondary">Rp 0</span>
+                                </div>
+                            </div>
+
+                            <!-- Panel Tampilan QRIS -->
+                            <div id="qris-panel" class="d-none text-center p-3 bg-light rounded border mb-3">
+                                <span class="badge bg-danger mb-2">QRIS Cafe Instant</span>
+                                <div class="my-2">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=BREWFLOW_POS_PAYMENT" alt="QRIS Code" class="img-fluid border p-1 bg-white rounded shadow-sm" style="max-width: 140px;">
+                                </div>
+                                <small class="text-muted d-block mt-1">Mendukung BCA, GoPay, OVO, Dana, ShopeePay, LinkAja & Bank Transfer</small>
                             </div>
                         </div>
 
                         <!-- Action Button -->
                         <button class="btn btn-success w-100 btn-lg fw-bold" onclick="processPayment()">
-                            <i class="fa-solid fa-check-circle me-1"></i> Bayar & Cetak Struk
+                            <i class="fa-solid fa-check-circle me-1"></i> Process Pembayaran
                         </button>
                     </div>
                 </div>
@@ -209,6 +242,22 @@
 
         let cart = [];
         let currentCategory = 'All';
+        let activePaymentMethod = 'CASH';
+
+        // Switch Metode Pembayaran (Tunai vs QRIS)
+        function switchPaymentMethod(method) {
+            activePaymentMethod = method;
+            const cashPanel = document.getElementById('cash-panel');
+            const qrisPanel = document.getElementById('qris-panel');
+
+            if (method === 'CASH') {
+                cashPanel.classList.remove('d-none');
+                qrisPanel.classList.add('d-none');
+            } else {
+                cashPanel.classList.add('d-none');
+                qrisPanel.classList.remove('d-none');
+            }
+        }
 
         // Render Menu Produk
         function renderMenu() {
@@ -237,7 +286,6 @@
         function filterCategory(category) {
             currentCategory = category;
             
-            // Update Active State Buttons
             const buttons = document.querySelectorAll('#category-filter button');
             buttons.forEach(btn => {
                 if (btn.innerText.includes(category) || (category === 'All' && btn.innerText === 'Semua')) {
@@ -372,14 +420,19 @@
             }
 
             const { subtotal, tax, total } = getTotals();
-            const cashInput = parseFloat(document.getElementById('cash-amount').value) || 0;
+            let paidAmount = total;
+            let change = 0;
 
-            if (cashInput < total) {
-                alert(`Uang tunai kurang! Silakan masukkan nominal minimal Rp ${total.toLocaleString('id-ID')}`);
-                return;
+            if (activePaymentMethod === 'CASH') {
+                const cashInput = parseFloat(document.getElementById('cash-amount').value) || 0;
+                if (cashInput < total) {
+                    alert(`Uang tunai kurang! Silakan masukkan nominal minimal Rp ${total.toLocaleString('id-ID')}`);
+                    return;
+                }
+                paidAmount = cashInput;
+                change = paidAmount - total;
             }
 
-            const change = cashInput - total;
             const now = new Date().toLocaleString('id-ID');
 
             // Susun HTML Struk
@@ -388,8 +441,9 @@
                 <p class="small text-muted mb-3">Jl. Kopi Nikmat No. 88, Jakarta<br>Telp: 0812-3456-7890</p>
                 <hr>
                 <div class="text-start small mb-2">
-                    <div>Waktu : ${now}</div>
-                    <div>Kasir : Admin Cafe</div>
+                    <div>Waktu  : ${now}</div>
+                    <div>Kasir  : Admin Cafe</div>
+                    <div>Metode : <strong>${activePaymentMethod === 'CASH' ? 'TUNAI' : 'QRIS (LUNAS)'}</strong></div>
                 </div>
                 <hr>
                 <div class="text-start mb-3">
@@ -411,7 +465,7 @@
                     <div class="d-flex justify-content-between"><span>Subtotal:</span><span>Rp ${subtotal.toLocaleString('id-ID')}</span></div>
                     <div class="d-flex justify-content-between"><span>PPN (10%):</span><span>Rp ${tax.toLocaleString('id-ID')}</span></div>
                     <div class="d-flex justify-content-between fw-bold fs-6 mt-1"><span>Total:</span><span>Rp ${total.toLocaleString('id-ID')}</span></div>
-                    <div class="d-flex justify-content-between mt-2"><span>Bayar Tunai:</span><span>Rp ${cashInput.toLocaleString('id-ID')}</span></div>
+                    <div class="d-flex justify-content-between mt-2"><span>Bayar (${activePaymentMethod}):</span><span>Rp ${paidAmount.toLocaleString('id-ID')}</span></div>
                     <div class="d-flex justify-content-between fw-bold"><span>Kembalian:</span><span>Rp ${change.toLocaleString('id-ID')}</span></div>
                 </div>
                 <hr>
