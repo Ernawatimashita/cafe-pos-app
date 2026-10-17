@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrewFlow - Café POS & Kasir</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #6f4e37;
+            --secondary-color: #a0522d;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .card-menu {
+            border: none;
+            border-radius: 12px;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .card-menu:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 15px rgba(111, 78, 55, 0.2);
+        }
+
+        .menu-emoji {
+            font-size: 2.5rem;
+        }
+
+        .cart-container {
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            background: #ffffff;
+            position: sticky;
+            top: 20px;
+        }
+
+        .quick-cash-btn {
+            font-size: 0.85rem;
+            padding: 4px 8px;
+        }
+
+        .category-badge {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .receipt-preview {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #fffdec;
+            border: 1px dashed #ccc;
+            padding: 15px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4" style="background-color: var(--primary-color) !important;">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+                <i class="fa-solid fa-mug-hot"></i> BrewFlow Café POS
+            </a>
+            <span class="navbar-text text-white-50 fs-6">
+                Sistem Kasir Café Modern
+            </span>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid px-4">
+        <div class="row g-4">
+            
+            <!-- Left Panel: Menu & Categorization -->
+            <div class="col-lg-7 col-xl-8">
+                <!-- Filter Kategori -->
+                <div class="d-flex gap-2 mb-3 overflow-auto pb-2" id="category-filter">
+                    <button class="btn btn-dark active rounded-pill px-3" onclick="filterCategory('All')">Semua</button>
+                    <button class="btn btn-outline-dark rounded-pill px-3" onclick="filterCategory('Kopi')">☕ Kopi</button>
+                    <button class="btn btn-outline-dark rounded-pill px-3" onclick="filterCategory('Non-Kopi')">🍵 Non-Kopi</button>
+                    <button class="btn btn-outline-dark rounded-pill px-3" onclick="filterCategory('Pastry')">🥐 Pastry</button>
+                    <button class="btn btn-outline-dark rounded-pill px-3" onclick="filterCategory('Makanan')">🍝 Makanan</button>
+                </div>
+
+                <!-- Katalog Menu Grid -->
+                <div class="row g-3" id="menu-grid">
+                    <!-- Dynamic rendering via JS -->
+                </div>
+            </div>
+
+            <!-- Right Panel: Cart & Payment -->
+            <div class="col-lg-5 col-xl-4">
+                <div class="cart-container p-3 border">
+                    <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                        <h5 class="m-0 fw-bold"><i class="fa-solid fa-receipt me-2"></i>Pesanan Aktif</h5>
+                        <button class="btn btn-sm btn-outline-danger" onclick="clearCart()">
+                            <i class="fa-solid fa-trash me-1"></i> Kosongkan
+                        </button>
+                    </div>
+
+                    <!-- Cart Item List -->
+                    <div id="cart-list" style="max-height: 280px; overflow-y: auto;" class="mb-3">
+                        <p class="text-center text-muted my-4">Belum ada pesanan dipilih</p>
+                    </div>
+
+                    <!-- Ringkasan Pembayaran -->
+                    <div class="border-top pt-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Subtotal</span>
+                            <span id="subtotal-val" class="fw-semibold">Rp 0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">PPN (10%)</span>
+                            <span id="tax-val" class="fw-semibold">Rp 0</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3 fs-5 fw-bold text-dark border-top pt-2">
+                            <span>Total Tagihan</span>
+                            <span id="total-val" class="text-primary">Rp 0</span>
+                        </div>
+
+                        <!-- Opsi Pembayaran Tunai -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold mb-1">Pembayaran Tunai (Rp)</label>
+                            <input type="number" id="cash-amount" class="form-control form-control-lg mb-2" placeholder="Masukkan jumlah uang..." oninput="calculateChange()">
+                            
+                            <!-- Quick Cash Buttons -->
+                            <div class="d-flex gap-1 flex-wrap mb-2">
+                                <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash('exact')">Uang Pas</button>
+                                <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash(20000)">20k</button>
+                                <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash(50000)">50k</button>
+                                <button class="btn btn-sm btn-outline-secondary quick-cash-btn" onclick="setQuickCash(100000)">100k</button>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded border">
+                                <span class="fw-semibold">Kembalian:</span>
+                                <span id="change-val" class="fw-bold fs-6 text-secondary">Rp 0</span>
+                            </div>
+                        </div>
+
+                        <!-- Action Button -->
+                        <button class="btn btn-success w-100 btn-lg fw-bold" onclick="processPayment()">
+                            <i class="fa-solid fa-check-circle me-1"></i> Bayar & Cetak Struk
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal Struk Pembayaran -->
+    <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Struk Transaksi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="receipt-content" class="receipt-preview text-center">
+                        <!-- Receipt content generated by JS -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    <button type="button" class="btn btn-primary" onclick="window.print()">
+                        <i class="fa-solid fa-print me-1"></i> Cetak Struk
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- App Logic JavaScript -->
+    <script>
+        // Data Produk Café
+        const products = [
+            { id: 1, name: 'Espresso Single', price: 18000, category: 'Kopi', emoji: '☕' },
+            { id: 2, name: 'Caffe Latte', price: 28000, category: 'Kopi', emoji: '🥛' },
+            { id: 3, name: 'Americano Ice', price: 24000, category: 'Kopi', emoji: '🧊' },
+            { id: 4, name: 'Cappuccino', price: 28000, category: 'Kopi', emoji: '☕' },
+            { id: 5, name: 'Matcha Green Tea', price: 32000, category: 'Non-Kopi', emoji: '🍵' },
+            { id: 6, name: 'Chocolate Ice', price: 30000, category: 'Non-Kopi', emoji: '🍫' },
+            { id: 7, name: 'Butter Croissant', price: 25000, category: 'Pastry', emoji: '🥐' },
+            { id: 8, name: 'Cinnamon Roll', price: 22000, category: 'Pastry', emoji: '🌀' },
+            { id: 9, name: 'Spaghetti Carbonara', price: 45000, category: 'Makanan', emoji: '🍝' },
+            { id: 10, name: 'French Fries', price: 20000, category: 'Makanan', emoji: '🍟' }
+        ];
+
+        let cart = [];
+        let currentCategory = 'All';
+
+        // Render Menu Produk
+        function renderMenu() {
+            const grid = document.getElementById('menu-grid');
+            grid.innerHTML = '';
+
+            const filtered = currentCategory === 'All' 
+                ? products 
+                : products.filter(p => p.category === currentCategory);
+
+            filtered.forEach(p => {
+                grid.innerHTML += `
+                    <div class="col-6 col-md-4 col-xl-3">
+                        <div class="card card-menu h-100 p-3 text-center" onclick="addToCart(${p.id})">
+                            <div class="menu-emoji mb-2">${p.emoji}</div>
+                            <h6 class="fw-bold mb-1 text-dark">${p.name}</h6>
+                            <span class="badge bg-light text-dark border mb-2 category-badge">${p.category}</span>
+                            <div class="text-primary fw-bold">Rp ${p.price.toLocaleString('id-ID')}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Filter Berdasarkan Kategori
+        function filterCategory(category) {
+            currentCategory = category;
+            
+            // Update Active State Buttons
+            const buttons = document.querySelectorAll('#category-filter button');
+            buttons.forEach(btn => {
+                if (btn.innerText.includes(category) || (category === 'All' && btn.innerText === 'Semua')) {
+                    btn.classList.add('btn-dark', 'active');
+                    btn.classList.remove('btn-outline-dark');
+                } else {
+                    btn.classList.remove('btn-dark', 'active');
+                    btn.classList.add('btn-outline-dark');
+                }
+            });
+
+            renderMenu();
+        }
+
+        // Tambah ke Keranjang
+        function addToCart(id) {
+            const product = products.find(p => p.id === id);
+            const exist = cart.find(item => item.id === id);
+
+            if (exist) {
+                exist.qty += 1;
+            } else {
+                cart.push({ ...product, qty: 1 });
+            }
+
+            updateCartUI();
+        }
+
+        // Kurangi / Hapus dari Keranjang
+        function updateQty(id, change) {
+            const item = cart.find(i => i.id === id);
+            if (!item) return;
+
+            item.qty += change;
+            if (item.qty <= 0) {
+                cart = cart.filter(i => i.id !== id);
+            }
+
+            updateCartUI();
+        }
+
+        // Kosongkan Keranjang
+        function clearCart() {
+            cart = [];
+            document.getElementById('cash-amount').value = '';
+            updateCartUI();
+        }
+
+        // Hitung Total Tagihan
+        function getTotals() {
+            const subtotal = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+            const tax = subtotal * 0.1; // PPN 10%
+            const total = subtotal + tax;
+            return { subtotal, tax, total };
+        }
+
+        // Update Tampilan Keranjang
+        function updateCartUI() {
+            const list = document.getElementById('cart-list');
+            list.innerHTML = '';
+
+            if (cart.length === 0) {
+                list.innerHTML = '<p class="text-center text-muted my-4">Belum ada pesanan dipilih</p>';
+            } else {
+                cart.forEach(item => {
+                    list.innerHTML += `
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                            <div>
+                                <div class="fw-bold">${item.name}</div>
+                                <small class="text-muted">Rp ${item.price.toLocaleString('id-ID')}</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button class="btn btn-sm btn-outline-danger px-2 py-0" onclick="updateQty(${item.id}, -1)">-</button>
+                                <span class="fw-bold">${item.qty}</span>
+                                <button class="btn btn-sm btn-outline-success px-2 py-0" onclick="updateQty(${item.id}, 1)">+</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            const { subtotal, tax, total } = getTotals();
+            document.getElementById('subtotal-val').innerText = `Rp ${subtotal.toLocaleString('id-ID')}`;
+            document.getElementById('tax-val').innerText = `Rp ${tax.toLocaleString('id-ID')}`;
+            document.getElementById('total-val').innerText = `Rp ${total.toLocaleString('id-ID')}`;
+
+            calculateChange();
+        }
+
+        // Hitung Kembalian
+        function calculateChange() {
+            const { total } = getTotals();
+            const cashInput = parseFloat(document.getElementById('cash-amount').value) || 0;
+            const changeEl = document.getElementById('change-val');
+
+            if (cart.length === 0) {
+                changeEl.innerText = 'Rp 0';
+                changeEl.className = 'fw-bold fs-6 text-secondary';
+                return;
+            }
+
+            const change = cashInput - total;
+
+            if (cashInput === 0) {
+                changeEl.innerText = 'Rp 0';
+                changeEl.className = 'fw-bold fs-6 text-secondary';
+            } else if (change < 0) {
+                changeEl.innerText = `Kurang Rp ${Math.abs(change).toLocaleString('id-ID')}`;
+                changeEl.className = 'fw-bold fs-6 text-danger';
+            } else {
+                changeEl.innerText = `Rp ${change.toLocaleString('id-ID')}`;
+                changeEl.className = 'fw-bold fs-6 text-success';
+            }
+        }
+
+        // Set Uang Cepat
+        function setQuickCash(val) {
+            const { total } = getTotals();
+            if (val === 'exact') {
+                document.getElementById('cash-amount').value = total;
+            } else {
+                document.getElementById('cash-amount').value = val;
+            }
+            calculateChange();
+        }
+
+        // Proses Pembayaran & Tampilkan Struk
+        function processPayment() {
+            if (cart.length === 0) {
+                alert('Pilih minimal 1 menu sebelum melakukan pembayaran!');
+                return;
+            }
+
+            const { subtotal, tax, total } = getTotals();
+            const cashInput = parseFloat(document.getElementById('cash-amount').value) || 0;
+
+            if (cashInput < total) {
+                alert(`Uang tunai kurang! Silakan masukkan nominal minimal Rp ${total.toLocaleString('id-ID')}`);
+                return;
+            }
+
+            const change = cashInput - total;
+            const now = new Date().toLocaleString('id-ID');
+
+            // Susun HTML Struk
+            let receiptHTML = `
+                <h4 class="fw-bold mb-1">☕ BREWFLOW CAFÉ</h4>
+                <p class="small text-muted mb-3">Jl. Kopi Nikmat No. 88, Jakarta<br>Telp: 0812-3456-7890</p>
+                <hr>
+                <div class="text-start small mb-2">
+                    <div>Waktu : ${now}</div>
+                    <div>Kasir : Admin Cafe</div>
+                </div>
+                <hr>
+                <div class="text-start mb-3">
+            `;
+
+            cart.forEach(item => {
+                receiptHTML += `
+                    <div class="d-flex justify-content-between small">
+                        <span>${item.name} x${item.qty}</span>
+                        <span>Rp ${(item.price * item.qty).toLocaleString('id-ID')}</span>
+                    </div>
+                `;
+            });
+
+            receiptHTML += `
+                </div>
+                <hr>
+                <div class="text-start small">
+                    <div class="d-flex justify-content-between"><span>Subtotal:</span><span>Rp ${subtotal.toLocaleString('id-ID')}</span></div>
+                    <div class="d-flex justify-content-between"><span>PPN (10%):</span><span>Rp ${tax.toLocaleString('id-ID')}</span></div>
+                    <div class="d-flex justify-content-between fw-bold fs-6 mt-1"><span>Total:</span><span>Rp ${total.toLocaleString('id-ID')}</span></div>
+                    <div class="d-flex justify-content-between mt-2"><span>Bayar Tunai:</span><span>Rp ${cashInput.toLocaleString('id-ID')}</span></div>
+                    <div class="d-flex justify-content-between fw-bold"><span>Kembalian:</span><span>Rp ${change.toLocaleString('id-ID')}</span></div>
+                </div>
+                <hr>
+                <p class="small text-muted mt-3 mb-0">Terima kasih atas kunjungan Anda!<br>Semoga hari Anda menyenangkan ☕</p>
+            `;
+
+            document.getElementById('receipt-content').innerHTML = receiptHTML;
+
+            // Tampilkan Modal Struk
+            const modal = new bootstrap.Modal(document.getElementById('receiptModal'));
+            modal.show();
+
+            // Reset Form Kasir
+            clearCart();
+        }
+
+        // Inisialisasi awal saat halaman dimuat
+        renderMenu();
+    </script>
+</body>
+</html>
